@@ -27,7 +27,7 @@ class Concatenator(object):
 
         for file in files:
             m = search(self.matching_regex, file)
-            if m is None:
+            if not m:
                 continue
 
             m_dict = m.groupdict()
@@ -36,7 +36,7 @@ class Concatenator(object):
             new_file = join(dirname, prefix)
             already_there = self.groups_by_prefix.get(new_file)
 
-            if already_there is None:
+            if not already_there:
                 already_there = []
                 self.groups_by_prefix[new_file] = already_there
 
