@@ -46,7 +46,6 @@ class Concatenator(object):
         for new_file, filenames in self.groups_by_prefix.items():
             filenames.sort()
             cmd = 'cat {}'.format(' '.join(filenames))
-            exit_code = -1
             with open(new_file, 'wb') as f:
                 f.write(subprocess.check_output([cmd], shell=True))
 
