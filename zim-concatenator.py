@@ -10,11 +10,9 @@ from os.path import walk
 from re import search
 from re import compile
 
-class Concatenator(object):
-    @property
-    def dict(self):
-        return self.groups_by_prefix
+import subprocess
 
+class Concatenator(object):
     def __init__(self, path, matching_regex_exp=r'(?P<prefix>\w+\.zim)(?P<suffix>\w+)'):
         self.path = path
         self.resolved_path = abspath(expanduser(self.path))
@@ -23,26 +21,39 @@ class Concatenator(object):
         self.matching_regex = compile(matching_regex_exp)
         self.groups_by_prefix = {}
 
-    def concatenate(self, arg, dirname, files):
-        def is_match(name):
-            return search(self.matching_regex, name)
+    def group_by_prefix(self, arg, dirname, files):
+        if len(files) <= 1:
+            return
 
         for file in files:
             m = search(self.matching_regex, file)
-            if m is not None:
-                m_dict = m.groupdict()
-                prefix = m_dict['prefix']
-                suffix = m_dict['suffix']
-                already_there = self.groups_by_prefix.get(prefix)
-                if already_there is None:
-                    already_there = []
-                    self.groups_by_prefix[prefix] = already_there
-                already_there.append(prefix + suffix)
+            if m is None:
+                continue
+
+            m_dict = m.groupdict()
+            prefix = m_dict['prefix']
+            suffix = m_dict['suffix']
+            new_file = join(dirname, prefix)
+            already_there = self.groups_by_prefix.get(new_file)
+
+            if already_there is None:
+                already_there = []
+                self.groups_by_prefix[new_file] = already_there
+
+            already_there.append(join(dirname, prefix + suffix))
+
+    def concatenate(self):
+        for new_file, filenames in self.groups_by_prefix.items():
+            filenames.sort()
+            cmd = 'cat {}'.format(' '.join(filenames))
+            exit_code = -1
+            with open(new_file, 'wb') as f:
+                f.write(subprocess.check_output([cmd], shell=True))
 
     def run(self):
-        walk(self.resolved_path, self.concatenate, '')
+        walk(self.resolved_path, self.group_by_prefix, '')
+        self.concatenate()
 
 if __name__ == '__main__':
     concatenator = Concatenator(path='.')
     concatenator.run()
-    print(concatenator.dict)
