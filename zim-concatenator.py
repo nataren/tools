@@ -8,6 +8,7 @@ from os.path import isdir
 from os.path import abspath
 from os.path import join
 from os.path import walk
+from pipes import quote
 
 from re import search
 from re import compile
@@ -17,7 +18,7 @@ import argparse
 import logging
 
 class Concatenator(object):
-    def __init__(self, path, logger, matching_regex_exp=r'(?P<prefix>\w+\.zim)(?P<suffix>\w+)'):
+    def __init__(self, path, logger, matching_regex_exp=r'^(?P<prefix>[\w\-\_\s]+\.zim)(?P<suffix>\w+)$'):
         self.logger = logger
         self.logger.debug('init concatenator')
         self.path = path
@@ -52,9 +53,12 @@ class Concatenator(object):
         self.logger.debug('concatenate')
         for new_file, filenames in self.groups_by_prefix.items():
             filenames.sort()
+            filenames = map(lambda f: quote(f), filenames)
             file_names_args = ' '.join(filenames)
             cmd = 'cat {}'.format(file_names_args)
             self.logger.debug('Going to create `%s` as a concatenation of `%s`', new_file, file_names_args)
+
+            # TODO(cesarn): Sanitize `new_file` so that it is a valid filename
             with open(new_file, 'wb') as f:
                 f.write(subprocess.check_output([cmd], shell=True))
 
